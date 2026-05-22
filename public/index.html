@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>MOVIEPRO</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+
+body{
+background:#050505;
+color:white;
+font-family:sans-serif;
+margin:0;
+}
+
+.hero{
+height:70vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:
+linear-gradient(to top,#050505,#00000055),
+url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1400')
+center/cover;
+}
+
+.search{
+display:flex;
+gap:10px;
+width:90%;
+max-width:700px;
+}
+
+.search input{
+flex:1;
+padding:18px;
+border:none;
+border-radius:14px;
+background:#161616;
+color:white;
+}
+
+.search button{
+padding:18px 25px;
+border:none;
+border-radius:14px;
+background:#e50914;
+color:white;
+cursor:pointer;
+}
+
+.movies{
+padding:40px;
+display:grid;
+grid-template-columns:
+repeat(auto-fill,minmax(220px,1fr));
+gap:20px;
+}
+
+.card{
+background:#111;
+border-radius:18px;
+overflow:hidden;
+cursor:pointer;
+transition:.3s;
+}
+
+.card:hover{
+transform:scale(1.05);
+}
+
+.card img{
+width:100%;
+height:320px;
+object-fit:cover;
+}
+
+.card h3{
+padding:15px;
+font-size:16px;
+}
+
+.modal{
+position:fixed;
+inset:0;
+background:#000000d9;
+display:none;
+justify-content:center;
+align-items:center;
+padding:20px;
+}
+
+.box{
+background:#111;
+width:100%;
+max-width:800px;
+border-radius:25px;
+overflow:hidden;
+}
+
+.box img{
+width:100%;
+height:350px;
+object-fit:cover;
+}
+
+.content{
+padding:20px;
+}
+
+.downloads{
+margin-top:20px;
+display:grid;
+gap:10px;
+}
+
+.downloads button{
+padding:15px;
+border:none;
+border-radius:12px;
+background:#e50914;
+color:white;
+cursor:pointer;
+}
+
+.whatsapp{
+display:none;
+margin-top:20px;
+gap:10px;
+}
+
+.whatsapp input{
+flex:1;
+padding:15px;
+border:none;
+border-radius:12px;
+background:#1a1a1a;
+color:white;
+}
+
+.whatsapp button{
+padding:15px 20px;
+border:none;
+border-radius:12px;
+background:#00c853;
+color:white;
+cursor:pointer;
+}
+
+</style>
+</head>
+<body>
+
+<div class="hero">
+
+<div class="search">
+
+<input
+type="text"
+id="search"
+placeholder="Search Movies..."
+>
+
+<button onclick="searchMovies()">
+Search
+</button>
+
+</div>
+
+</div>
+
+<div class="movies"
+id="movies"></div>
+
+<div class="modal"
+id="modal">
+
+<div class="box">
+
+<img id="banner">
+
+<div class="content">
+
+<h1 id="title"></h1>
+
+<p id="desc"></p>
+
+<div class="downloads"
+id="downloads"></div>
+
+<div class="whatsapp"
+id="wa">
+
+<input
+type="text"
+id="number"
+placeholder="947XXXXXXXX"
+>
+
+<button onclick="sendMovie()">
+Send
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const movies =
+document.getElementById(
+"movies"
+);
+
+const modal =
+document.getElementById(
+"modal"
+);
+
+let selectedMovie = null;
+
+async function searchMovies(){
+
+const q =
+document.getElementById(
+"search"
+).value;
+
+if(!q) return;
+
+movies.innerHTML =
+"<h2 style='padding:40px'>Loading...</h2>";
+
+const res =
+await fetch(
+"/api/search?q=" +
+encodeURIComponent(q)
+);
+
+const data =
+await res.json();
+
+movies.innerHTML = "";
+
+const results =
+data.result || [];
+
+results.forEach(movie=>{
+
+const card =
+document.createElement("div");
+
+card.className = "card";
+
+card.innerHTML = `
+<img src="${movie.image}">
+<h3>${movie.title}</h3>
+`;
+
+card.onclick =
+()=> openMovie(movie.id);
+
+movies.appendChild(card);
+
+});
+
+}
+
+async function openMovie(id){
+
+modal.style.display =
+"flex";
+
+const res =
+await fetch(
+"/api/info?id=" + id
+);
+
+const data =
+await res.json();
+
+const movie =
+data.movie ||
+data.result ||
+data;
+
+selectedMovie =
+movie;
+
+document.getElementById(
+"banner"
+).src =
+movie.image;
+
+document.getElementById(
+"title"
+).innerText =
+movie.title;
+
+document.getElementById(
+"desc"
+).innerText =
+movie.description ||
+"No description";
+
+const downloads =
+movie.downloadLinks ||
+movie.download ||
+[];
+
+const dl =
+document.getElementById(
+"downloads"
+);
+
+dl.innerHTML = "";
+
+downloads.forEach(d=>{
+
+const btn =
+document.createElement(
+"button"
+);
+
+btn.innerText =
+"⬇️ " + d.quality;
+
+btn.onclick = ()=>{
+
+document.getElementById(
+"wa"
+).style.display =
+"flex";
+
+selectedMovie.download =
+d;
+
+};
+
+dl.appendChild(btn);
+
+});
+
+}
+
+async function sendMovie(){
+
+const number =
+document.getElementById(
+"number"
+).value;
+
+if(!number){
+alert("Enter Number");
+return;
+}
+
+const res =
+await fetch("/api/send",{
+
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/json"
+},
+
+body:JSON.stringify({
+
+number,
+
+title:
+selectedMovie.title,
+
+quality:
+selectedMovie.download.quality,
+
+url:
+selectedMovie.download.link ||
+selectedMovie.download.url,
+
+image:
+selectedMovie.image
+
+})
+
+});
+
+const data =
+await res.json();
+
+if(data.status){
+
+alert(
+"✅ Movie Sent"
+);
+
+}else{
+
+alert(
+data.message
+);
+
+}
+
+}
+
+window.onclick = (e)=>{
+
+if(e.target === modal){
+
+modal.style.display =
+"none";
+
+}
+
+};
+
+</script>
+
+</body>
+</html>
